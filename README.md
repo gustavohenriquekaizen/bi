@@ -1,5 +1,5 @@
-# bi
--- criação das tabelas
+
+# -- criação das tabelas
 BULK INSERT autor
 FROM 'C:\Users\gusta\OneDrive\Documentos\dados\autor.csv'
 WITH (
