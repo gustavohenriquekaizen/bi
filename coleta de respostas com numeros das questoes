@@ -1,0 +1,143 @@
+-- 1. Listar todos os autores do museu.
+SELECT * FROM autor;
+
+-- 2. Qual é o nome da obra com o código 35?
+SELECT Titulo FROM obra WHERE Codigo = 35;
+
+-- 3. Quais obras foram criadas no ano de 1952?
+SELECT Codigo, Titulo FROM obra WHERE Ano = 1952;
+
+-- 4. Quais obras têm títulos que começam com a letra 'G'?
+SELECT Codigo, Titulo FROM obra WHERE Titulo LIKE 'G%';
+
+-- 5. Quais autores possuem nomes com exatamente 5 letras?
+SELECT Nome FROM autor WHERE LEN(Nome) = 5;
+
+-- 6. Quais obras foram feitas entre os anos de 1940 e 1950?
+SELECT Codigo, Titulo, Ano FROM obra WHERE Ano BETWEEN 1940 AND 1950;
+
+-- 7. Quais restauradores recebem entre R$ 3000 e R$ 4000 de salário?
+SELECT Nome, Salario FROM restaurador WHERE Salario BETWEEN 3000 AND 4000;
+
+-- 8. Qual é o nome do autor com a obra mais antiga?
+SELECT TOP 1 a.Nome, o.Titulo, o.Ano
+FROM obra o
+JOIN autor a ON o.idAutor = a.Id_Autor
+ORDER BY o.Ano ASC;
+
+-- 9. Nome dos restauradores e custo total das manutenções (maior para menor).
+SELECT r.Nome, SUM(m.Custo) AS TotalCusto
+FROM restaurador r
+JOIN manutencao m ON r.idManutencao = m.idManutencao
+GROUP BY r.Nome
+ORDER BY TotalCusto DESC;
+
+-- 10. Peso médio das esculturas por tipo de pedra.
+SELECT p.tipo_pedra, AVG(e.Peso) AS PesoMedio
+FROM escultura e
+JOIN pedra p ON e.idObra = p.idObra
+GROUP BY p.tipo_pedra;
+
+-- 11. Autores com obras em mais de 3 salões diferentes.
+SELECT a.Nome, COUNT(DISTINCT o.idSalao) AS QtdeSaloes
+FROM obra o
+JOIN autor a ON o.idAutor = a.Id_Autor
+GROUP BY a.Nome
+HAVING COUNT(DISTINCT o.idSalao) > 3;
+
+-- 12. Obras restauradas nos últimos 6 meses.
+SELECT DISTINCT o.Titulo, m.Data_termino
+FROM obra o
+JOIN manutencao m ON o.Codigo = m.idObra
+WHERE m.Data_termino >= DATEADD(MONTH, -6, GETDATE());
+
+-- 13. Esculturas com peso > 100kg e altura < 1m.
+SELECT idObra, Peso, Altura
+FROM escultura
+WHERE Peso > 100 AND Altura < 1;
+
+-- 14. Obras com manutenção > R$4000 nos últimos 12 meses.
+SELECT o.Titulo, m.Custo, m.Data_termino
+FROM obra o
+JOIN manutencao m ON o.Codigo = m.idObra
+WHERE m.Custo > 4000 AND m.Data_termino >= DATEADD(YEAR, -1, GETDATE());
+
+-- 15. Obras em salões diferentes com materiais de pedra diferentes.
+SELECT o1.Titulo AS Obra1, p1.tipo_pedra, o2.Titulo AS Obra2, p2.tipo_pedra
+FROM obra o1
+JOIN pedra p1 ON o1.Codigo = p1.idObra
+JOIN obra o2 ON o2.Codigo = p2.idObra
+JOIN pedra p2 ON o2.Codigo = p2.idObra
+WHERE o1.idSalao <> o2.idSalao AND p1.tipo_pedra <> p2.tipo_pedra;
+
+-- 16. Autor com maior custo de manutenção.
+SELECT TOP 1 a.Nome, SUM(m.Custo) AS TotalCusto
+FROM obra o
+JOIN autor a ON o.idAutor = a.Id_Autor
+JOIN manutencao m ON o.Codigo = m.idObra
+GROUP BY a.Nome
+ORDER BY TotalCusto DESC;
+
+-- 17. Obras de mármore no salão 1.
+SELECT o.Titulo, p.tipo_pedra, o.idSalao
+FROM obra o
+JOIN pedra p ON o.Codigo = p.idObra
+WHERE p.tipo_pedra = 'Mármore' AND o.idSalao = 1;
+
+-- 18. Autor mais internacional (obras em mais países).
+SELECT TOP 1 a.Nome, COUNT(DISTINCT pa.Descricao) AS QtdePaises
+FROM autor a
+JOIN pais pa ON a.Id_Autor = pa.idAutor
+GROUP BY a.Nome
+ORDER BY QtdePaises DESC;
+
+-- 19. Obras feitas com óleo, >90m² e pigmento usado em manutenção.
+SELECT o.Titulo, p.Area
+FROM obra o
+JOIN pintura p ON o.Codigo = p.idObra
+JOIN manutencao m ON o.Codigo = m.idObra
+JOIN materiaprima mp ON m.idManutencao = mp.idManutencao
+WHERE p.Tipo = 'Óleo' AND p.Area > 90 AND mp.Nome = 'Pigmento';
+
+-- 20. Materiais usados e quantidade de vezes em manutenções distintas.
+SELECT Nome, COUNT(DISTINCT idManutencao) AS QtdeUso
+FROM materiaprima
+GROUP BY Nome;
+
+-- 21. Restauradores que trabalham em mais de 3 dias na semana.
+SELECT r.Nome, COUNT(DISTINCT d.Dias_Atendimento) AS QtdeDias
+FROM restaurador r
+JOIN dias_atendimento d ON r.ID = d.ID
+GROUP BY r.Nome
+HAVING COUNT(DISTINCT d.Dias_Atendimento) > 3;
+
+-- 22. Top 3 obras mais caras em manutenção + autor + material.
+SELECT TOP 3 o.Titulo, a.Nome, p.tipo_pedra, SUM(m.Custo) AS TotalCusto
+FROM obra o
+JOIN autor a ON o.idAutor = a.Id_Autor
+JOIN manutencao m ON o.Codigo = m.idObra
+LEFT JOIN pedra p ON o.Codigo = p.idObra
+GROUP BY o.Titulo, a.Nome, p.tipo_pedra
+ORDER BY TotalCusto DESC;
+
+
+-- inconsistencias
+
+-- 23. Restauradores com salário abaixo do mínimo (R$ 1412 em 2024).
+SELECT * FROM restaurador WHERE Salario < 1412;
+
+-- 24. Registros na tabela Pedra com idPais inexistente.
+SELECT * FROM pedra p
+WHERE NOT EXISTS (SELECT 1 FROM pais pa WHERE pa.ID = p.idPais);
+
+-- 25. Obras com ano no futuro.
+SELECT * FROM obra WHERE Ano > YEAR(GETDATE());
+
+-- 26. Autores com nomes duplicados.
+SELECT Nome, COUNT(*) AS Qtde
+FROM autor
+GROUP BY Nome
+HAVING COUNT(*) > 1;
+
+-- 27. Manutenções com data de término < data de início.
+SELECT * FROM manutencao WHERE Data_termino < Data_inicio;
